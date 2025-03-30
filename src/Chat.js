@@ -150,7 +150,7 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/chat/users");
+        const res = await axios.get("https://chatbackend-b9nd.onrender.com/api/chat/users");
         const filteredUsers = res.data.filter((u) => u._id !== user._id);
         setUsers(filteredUsers);
         setLoading(false);
@@ -160,7 +160,7 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
         for (let u of filteredUsers) {
           try {
             const lastMessageRes = await axios.get(
-              `http://localhost:5000/api/chat/last-message/${u._id}`,
+              `https://chatbackend-b9nd.onrender.com/api/chat/last-message/${u._id}`,
               { params: { currentUserId: user._id } }
             );
             lastMessagesTemp[u._id] = lastMessageRes.data;
@@ -257,7 +257,7 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
       }
 
       const res = await axios.get(
-        `http://localhost:5000/api/chat/messages/${userId}`,
+        `https://chatbackend-b9nd.onrender.com/api/chat/messages/${userId}`,
         { params: { currentUserId: user._id } }
       );
       setMessages(res.data);
@@ -284,7 +284,7 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
         message: newMessage.trim(),
       };
 
-      await axios.post("http://localhost:5000/api/chat/send", newMessageData);
+      await axios.post("https://chatbackend-b9nd.onrender.com/api/chat/send", newMessageData);
 
       setNewMessage("");
     } catch (err) {
@@ -345,7 +345,7 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
     if (!selectedUser) return;
 
     try {
-      await axios.post("http://localhost:5000/api/chat/soft-delete", {
+      await axios.post("https://chatbackend-b9nd.onrender.com/api/chat/soft-delete", {
         userId: selectedUser._id,
         currentUserId: user._id,
       });
@@ -370,7 +370,7 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
     if (!selectedUser) return;
 
     try {
-      await axios.post("http://localhost:5000/api/chat/auto-soft-delete", {
+      await axios.post("https://chatbackend-b9nd.onrender.com/api/chat/auto-soft-delete", {
         userId: selectedUser._id,
         currentUserId: user._id,
       });
@@ -390,7 +390,7 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
 
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/chat/message-history/${selectedUser._id}`,
+        `https://chatbackend-b9nd.onrender.com/api/chat/message-history/${selectedUser._id}`,
         { params: { currentUserId: user._id } }
       );
 

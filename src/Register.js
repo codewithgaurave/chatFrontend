@@ -22,7 +22,7 @@ const Register = ({ setUser }) => {
 
         try {
             const res = await axios.post(
-                "http://localhost:5000/api/auth/register",
+                "https://chatbackend-b9nd.onrender.com/api/auth/register",
                 formData,
                 { headers: { "Content-Type": "application/json" } }
             );
