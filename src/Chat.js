@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { socket, connectSocket, disconnectSocket } from "./socket";
+import VideoCall from "./VideoCall";
 
 // SVG Icons
 const VideoCallIcon = () => (
@@ -138,6 +139,11 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
   const [fullChatHistory, setFullChatHistory] = useState([]);
   const [showSidebar, setShowSidebar] = useState(true);
   const [deletedChats, setDeletedChats] = useState([]);
+
+  const [isCalling, setIsCalling] = useState(false);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [activeCall, setActiveCall] = useState(null);
+
   const messagesEndRef = useRef(null);
 
   // Fetch users and setup socket
@@ -188,13 +194,51 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
       }));
     };
 
+    const handleIncomingCall = (data) => {
+      console.log("Incoming call received from:", data.callerId);
+      setIncomingCall({
+        callerId: data.callerId,
+        signalData: data.signalData,
+      });
+    };
+
+    const handleCallRejected = () => {
+      console.log("Call was rejected");
+      setIsCalling(false);
+      setIncomingCall(null);
+      alert("Call rejected");
+    };
+
+    const handleCallEnded = () => {
+      console.log("Call ended");
+      setIsCalling(false);
+      setIncomingCall(null);
+      setActiveCall(null);
+    };
+
+    const handleCallFailed = (data) => {
+      console.log("Call failed:", data.message);
+      setIsCalling(false);
+      setActiveCall(null);
+      alert(data.message);
+    };
+
+    socket.on("incomingCall", handleIncomingCall);
+    socket.on("callRejected", handleCallRejected);
+    socket.on("callEnded", handleCallEnded);
+    socket.on("callFailed", handleCallFailed);
+
     socket.on("receiveMessage", handleMessage);
 
     return () => {
+      socket.off("incomingCall", handleIncomingCall);
+      socket.off("callRejected", handleCallRejected);
+      socket.off("callEnded", handleCallEnded);
+      socket.off("callFailed", handleCallFailed);
       socket.off("receiveMessage", handleMessage);
       disconnectSocket();
     };
-  }, [user]);
+  }, [user._id]);
 
   useEffect(() => {
     scrollToBottom();
@@ -251,7 +295,49 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
 
   const handleVideoCall = () => {
     if (selectedUser) {
-      alert(`Initiating video call with ${selectedUser.name}`);
+      if (!socket.connected) {
+        alert("Not connected to server. Please refresh the page.");
+        return;
+      }
+      console.log("Initiating call to:", selectedUser._id);
+      setIsCalling(true);
+      setActiveCall({
+        callerId: user._id,
+        receiverId: selectedUser._id,
+        receiverName: selectedUser.name,
+      });
+    }
+  };
+
+  const acceptIncomingCall = () => {
+    console.log("Accepting incoming call");
+    const caller = users.find((u) => u._id === incomingCall.callerId);
+    setActiveCall({
+      callerId: incomingCall.callerId,
+      receiverId: user._id,
+      receiverName: caller?.name || "Caller",
+    });
+    setIncomingCall(null);
+  };
+
+  const rejectIncomingCall = () => {
+    console.log("Rejecting incoming call");
+    socket.emit("rejectCall", {
+      callerId: incomingCall.callerId,
+      receiverId: user._id,
+    });
+    setIncomingCall(null);
+  };
+
+  const endActiveCall = () => {
+    if (activeCall) {
+      console.log("Ending active call");
+      socket.emit("endCall", {
+        callerId: activeCall.callerId,
+        receiverId: activeCall.receiverId,
+      });
+      setActiveCall(null);
+      setIsCalling(false);
     }
   };
 
@@ -625,6 +711,30 @@ const ChatComponent = ({ user, selectedUser: initialSelectedUser }) => {
           renderEmptyState()
         )}
       </div>
+      {isCalling && activeCall && (
+        <VideoCall
+          callerId={activeCall.callerId}
+          receiverId={activeCall.receiverId}
+          receiverName={activeCall.receiverName}
+          onEndCall={endActiveCall}
+          isIncomingCall={false}
+          currentUserId={user._id}
+        />
+      )}
+
+      {incomingCall && (
+        <VideoCall
+          callerId={incomingCall.callerId}
+          receiverId={user._id}
+          receiverName={
+            users.find((u) => u._id === incomingCall.callerId)?.name || "Caller"
+          }
+          onEndCall={rejectIncomingCall}
+          onAcceptCall={acceptIncomingCall}
+          isIncomingCall={true}
+          callerSignal={incomingCall.signalData}
+        />
+      )}
     </div>
   );
 };
